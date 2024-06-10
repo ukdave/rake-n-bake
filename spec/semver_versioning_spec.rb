@@ -203,6 +203,46 @@ describe RakeNBake::SemverVersioning do
         expect(`git status`).to_not match(/version.rb/)
       end
     end
+
+    context 'when version.rb is nested further inside lib' do
+      around do |example|
+        FileUtils.mkdir_p 'lib/gemname/foo'
+        FileUtils.cp 'lib/version.rb', 'lib/gemname/foo/version.rb'
+        FileUtils.mv 'lib/version.rb', 'lib/version.rb.orig'
+        example.run
+        FileUtils.rm_rf 'lib/gemname'
+        FileUtils.mv 'lib/version.rb.orig', 'lib/version.rb'
+        `git reset lib/version.rb`
+        `git rm lib/gemname/foo/version.rb &>/dev/null`
+      end
+
+      it 'writes the version into lib/gemname/foo/version.rb' do
+        expect { described_class.update_version_rb }
+          .to change { File.read('lib/gemname/foo/version.rb').include? "VERSION = '1.2.3'" }
+          .from(false)
+          .to(true)
+      end
+
+      it 'does nothing if lib/gemname/foo/version.rb does not exist' do
+        FileUtils.rm 'lib/gemname/foo/version.rb'
+        expect { described_class.update_version_rb }
+          .to_not change { File.exist? 'lib/gemname/foo/version.rb' }
+          .from(false)
+      end
+
+      it 'stages changes to lib/gemname/foo/version.rb to git' do
+        expect { described_class.update_version_rb }
+          .to change { `git status`.include? 'lib/gemname/foo/version.rb' }
+          .from(false)
+          .to(true)
+      end
+
+      it 'does nothing if there are multiple version.rb files found' do
+        FileUtils.cp 'lib/version.rb.orig', 'lib/version.rb'
+        described_class.update_version_rb
+        expect(`git status`).to_not match(/version.rb/)
+      end
+    end
   end
 
   describe 'tag' do

@@ -61,7 +61,7 @@ module RakeNBake
     end
 
     def self.update_version_rb
-      version_files = Dir.glob('lib{,/*}/version.rb').uniq
+      version_files = Dir.glob('lib{,/**/*}/version.rb').uniq
       return unless version_files.size == 1
       version_file = version_files[0]
 
